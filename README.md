@@ -250,6 +250,295 @@ Sensitive files such as `.env` are excluded using `.gitignore`.
 
 ---
 
+## 🔌 REST API
+
+The application currently provides REST APIs for creating, retrieving, and updating collaborative documents.
+
+### Base URL
+
+```text
+http://localhost:8080
+```
+
+---
+
+### API Endpoints
+
+| Method  | Endpoint                            | Description                   |
+| ------- | ----------------------------------- | ----------------------------- |
+| `POST`  | `/api/documents`                    | Create a new document         |
+| `GET`   | `/api/document/findById/{id}`       | Find a document by MongoDB ID |
+| `GET`   | `/api/document/findByTitle/{title}` | Find a document by title      |
+| `PATCH` | `/api/documents/{id}/title`         | Update a document's title     |
+
+---
+
+### 1. Create Document
+
+Creates a new collaborative document and stores it in MongoDB.
+
+**Request**
+
+```http
+POST /api/documents
+Content-Type: application/json
+```
+
+**Request Body**
+
+```json
+{
+  "title": "DSA Notes"
+}
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:8080/api/documents \
+  -H "Content-Type: application/json" \
+  -d '{"title":"DSA Notes"}'
+```
+
+**Behavior**
+
+* Creates a new document.
+* MongoDB automatically generates the document ID.
+* The initial document version is set to `0`.
+* `createdAt` and `updatedAt` are initialized.
+* Document titles must be unique.
+* Creating a document with an existing title is rejected.
+
+**Example Response**
+
+```json
+{
+  "id": "64f123abc456789",
+  "title": "DSA Notes",
+  "currentContent": null,
+  "currentVersion": 0,
+  "createdAt": "2026-08-13T10:30:00Z",
+  "updatedAt": "2026-08-13T10:30:00Z"
+}
+```
+
+---
+
+### 2. Find Document by ID
+
+Retrieves a document using its MongoDB-generated ID.
+
+**Request**
+
+```http
+GET /api/document/findById/{id}
+```
+
+**Example**
+
+```http
+GET /api/document/findById/64f123abc456789
+```
+
+**cURL**
+
+```bash
+curl http://localhost:8080/api/document/findById/64f123abc456789
+```
+
+**Behavior**
+
+* Searches MongoDB using the document ID.
+* Returns the matching document.
+* Returns an error when the document does not exist.
+
+**Example Response**
+
+```json
+{
+  "id": "64f123abc456789",
+  "title": "DSA Notes",
+  "currentContent": null,
+  "currentVersion": 0,
+  "createdAt": "2026-08-13T10:30:00Z",
+  "updatedAt": "2026-08-13T10:30:00Z"
+}
+```
+
+---
+
+### 3. Find Document by Title
+
+Retrieves a document using its title.
+
+**Request**
+
+```http
+GET /api/document/findByTitle/{title}
+```
+
+**Example**
+
+```http
+GET /api/document/findByTitle/DSA%20Notes
+```
+
+The space in the title is URL encoded as `%20`.
+
+**cURL**
+
+```bash
+curl "http://localhost:8080/api/document/findByTitle/DSA%20Notes"
+```
+
+**Behavior**
+
+* Searches MongoDB using the document title.
+* Returns the matching document.
+* The MongoDB `_id` remains the actual document identifier.
+* The title provides a convenient human-readable lookup mechanism.
+* Returns an error when no document with the specified title exists.
+
+**Example Response**
+
+```json
+{
+  "id": "64f123abc456789",
+  "title": "DSA Notes",
+  "currentContent": null,
+  "currentVersion": 0,
+  "createdAt": "2026-08-13T10:30:00Z",
+  "updatedAt": "2026-08-13T10:30:00Z"
+}
+```
+
+---
+
+### 4. Update Document Title
+
+Updates the title of an existing document.
+
+**Request**
+
+```http
+PATCH /api/documents/{id}/title
+Content-Type: application/json
+```
+
+**Example**
+
+```http
+PATCH /api/documents/64f123abc456789/title
+```
+
+**Request Body**
+
+```json
+{
+  "title": "Advanced DSA Notes"
+}
+```
+
+**cURL**
+
+```bash
+curl -X PATCH http://localhost:8080/api/documents/64f123abc456789/title \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Advanced DSA Notes"}'
+```
+
+**Behavior**
+
+* Finds the document using its MongoDB ID.
+* Updates the document title.
+* Updates the `updatedAt` timestamp.
+* Prevents changing the title to a title already used by another document.
+* Returns an error when the document does not exist.
+
+**Example Response**
+
+```json
+{
+  "id": "64f123abc456789",
+  "title": "Advanced DSA Notes",
+  "currentContent": null,
+  "currentVersion": 0,
+  "createdAt": "2026-08-13T10:30:00Z",
+  "updatedAt": "2026-08-13T11:00:00Z"
+}
+```
+
+---
+
+### Request DTOs
+
+The API uses DTOs to receive request data instead of directly exposing the MongoDB entity.
+
+#### CreateDocumentRequest
+
+Used by:
+
+```http
+POST /api/documents
+```
+
+```json
+{
+  "title": "DSA Notes"
+}
+```
+
+#### UpdateTitleRequest
+
+Used by:
+
+```http
+PATCH /api/documents/{id}/title
+```
+
+```json
+{
+  "title": "Advanced DSA Notes"
+}
+```
+
+#### UpdateDocumentRequest
+
+The project currently contains an `UpdateDocumentRequest` DTO with support for:
+
+```json
+{
+  "title": "Updated Document",
+  "content": "Updated document content"
+}
+```
+
+The document-content update endpoint is **not implemented yet** and will be added in a future stage.
+
+---
+
+### Current API Architecture
+
+```text
+Client
+  │
+  │ HTTP Request
+  ▼
+DocumentController
+  │
+  ▼
+DocumentService
+  │
+  ▼
+DocumentRepository
+  │
+  ▼
+MongoDB
+```
+
+The controller handles HTTP requests, the service layer contains business logic, the repository handles database operations, and MongoDB provides persistent document storage.
+
+
 ## 🚧 Current Progress
 
 ### Completed
@@ -266,14 +555,19 @@ Sensitive files such as `.env` are excluded using `.gitignore`.
 * [x] Successfully persist a document in MongoDB
 * [x] Initialize Git repository
 * [x] Push initial project to GitHub
+* [x] Create DTO layer
+* [x] Create REST controller
+* [x] Implement document creation API
+* [x] Implement document retrieval by MongoDB ID
+* [x] Implement document retrieval by title
+* [x] Implement document title update API
+* [x] Add duplicate document-title validation
+* [x] Remove temporary startup document creation test
 
 ### In Progress
 
-* [ ] Create DTO layer
-* [ ] Create REST controllers
-* [ ] Implement document creation API
-* [ ] Implement document retrieval API
-* [ ] Implement document update API
+* [ ] Implement complete document content update API
+* [ ] Implement document deletion API
 * [ ] Implement document version history
 * [ ] Implement autosave
 * [ ] Implement WebSocket communication

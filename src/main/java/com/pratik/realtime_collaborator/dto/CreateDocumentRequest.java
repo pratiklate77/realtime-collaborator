@@ -1,0 +1,13 @@
+package com.pratik.realtime_collaborator.dto;
+
+public class CreateDocumentRequest {
+    private String title;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+}
